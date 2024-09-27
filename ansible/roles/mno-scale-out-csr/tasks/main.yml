@@ -1,0 +1,48 @@
+---
+- name: Approve node-bootstrapper CSRs and wait for nodes to join cluster
+  include_tasks: check_nodes_joined.yml
+  vars:
+    qry: "items[?status.conditions==null && spec.username == 'system:serviceaccount:openshift-machine-config-operator:node-bootstrapper']"
+    worker_counter: "grep -c worker"
+
+- name: Approve Kublet-serving CSRs and wait for nodes to join cluster
+  include_tasks: check_nodes_joined.yml
+  vars:
+    qry: "items[?status.conditions==null && spec.signerName == 'kubernetes.io/kubelet-serving']"
+    worker_counter: "grep worker | grep -c -v NotReady"
+
+  #- name: Wait up to 30 mins for node-bootstrapper CSRs
+  #  shell: |
+  #    KUBECONFIG={{ bastion_cluster_config_dir }}/kubeconfig oc get csr -o json
+  #  register: oc_get_csr
+  #  retries: 60
+  #  delay: 30
+  #  until:
+  #  - "(oc_get_csr.stdout | from_json | json_query(qry) | length) >= scale_out_node_count"
+  #
+  #- name: Approve pending CSRs
+  #  shell: |
+  #    KUBECONFIG={{ bastion_cluster_config_dir }}/kubeconfig oc adm certificate approve {{ item.metadata.name }}
+  #  with_items: "{{ oc_get_csr.stdout | from_json | json_query(qry) }}"
+  #  loop_control:
+  #    label: "{{ item.metadata.name }}"
+
+    #- name: Set Kublet-serving nodes Query Fact
+    #  set_fact:
+    #    qry: "items[?status.conditions==null && spec.signerName == 'kubernetes.io/kubelet-serving']"
+    #
+    #- name: Wait up to 30 mins for kubelet-serving CSRs
+    #  shell: |
+    #    KUBECONFIG={{ bastion_cluster_config_dir }}/kubeconfig oc get csr -o json
+    #  register: oc_get_csr
+    #  retries: 60
+    #  delay: 30
+    #  until:
+    #  - "(oc_get_csr.stdout | from_json | json_query(qry) | length) >= scale_out_node_count"
+    #
+    #- name: Approve pending CSRs
+    #  shell: |
+    #    KUBECONFIG={{ bastion_cluster_config_dir }}/kubeconfig oc adm certificate approve {{ item.metadata.name }}
+    #  with_items: "{{ oc_get_csr.stdout | from_json | json_query(qry) }}"
+    #  loop_control:
+    #    label: "{{ item.metadata.name }}"

@@ -1,0 +1,34 @@
+---
+- name: Delete mno-scale-out directory
+  ansible.builtin.file:
+    state: absent
+    path: /root/mno-scale-out
+
+- name: Create mno-scale-out directory
+  ansible.builtin.file:
+    state: directory
+    path: /root/mno-scale-out
+
+- name: Template Scaleout Nodes Config
+  template:
+    src: nodes-config.yml.j2
+    dest: /root/mno-scale-out/nodes-config.yaml
+  vars:
+          #    workers: "{{ groups['hv_vm'][worker_node_count:worker_node_count+scale_out_node_count] }}"
+    workers: "{{ groups['hv_vm'][scale_out_node_offset:scale_out_node_offset+scale_out_node_count] }}"
+
+- name: Add Nodes to cluster and generate boot iso (Takes a min or two)
+  command: oc adm node-image create --kubeconfig {{ bastion_cluster_config_dir }}/kubeconfig 
+  args:
+    chdir: /root/mno-scale-out/
+
+- name: Copy scale out discovery iso to http server
+  ansible.builtin.copy:
+    src: /root/mno-scale-out/node.x86_64.iso
+    dest: /opt/http_store/data/mno-scale-out.x86_64.iso
+
+- name: Delete mno-scale-out directory
+  ansible.builtin.file:
+    state: absent
+    path: /root/mno-scale-out
+

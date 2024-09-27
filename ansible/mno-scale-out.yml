@@ -1,0 +1,18 @@
+---
+- name: Adds nodes to a cluster
+  hosts: bastion
+  vars_files:
+  - vars/lab.yml
+  - vars/all.yml
+  roles:
+  - mno-scale-out
+  - role: boot-iso
+    vars:
+      inventory_group: 'hv_vm'
+      offset: "{{ scale_out_node_offset }}"
+      index: "{{ scale_out_node_offset+scale_out_node_count }}"
+      #offset: worker_node_count
+      #index: worker_node_count+scale_out_node_count
+      virtual_media_iso: "mno-scale-out.x86_64.iso"
+      #- mno-scale-out-csr
+  - mno-scale-out-csr

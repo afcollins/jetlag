@@ -1,0 +1,8 @@
+---
+- name: Adds nodes to a cluster
+  hosts: bastion
+  vars_files:
+  - vars/lab.yml
+  - vars/all.yml
+  roles:
+    - mno-scale-out-csr
