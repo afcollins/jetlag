@@ -93,6 +93,17 @@
   set_fact:
     ai_infraenv_id: "{{ create_infra_env_return.json.id }}"
 
+- name: Patch infra-env to bump arp cache with ignition config overrides
+  uri:
+    url: "http://{{ assisted_installer_host }}:{{ assisted_installer_port }}/api/assisted-install/v2/infra-envs/{{ ai_infraenv_id }}"
+    method: PATCH
+    body_format: json
+    status_code: [201]
+    return_content: true
+    body: {
+        "ignition_config_override": "{{ lookup('template', 'arp.ign.j2') | to_json }}",
+    }
+
 - name: Patch infra-env for bastion registry with ignition config overrides
   uri:
     url: "http://{{ assisted_installer_host }}:{{ assisted_installer_port }}/api/assisted-install/v2/infra-envs/{{ ai_infraenv_id }}"

@@ -6,6 +6,16 @@
 # ansible-playbook -i ansible/inventory/cloud42.local ansible/hv-vm-create.yml
 #
 
+- name: Setup arptables on HV nodes
+  hosts: hv
+  gather_facts: false
+  tasks:
+  - name: Allow ebtables FORWARD chain to pass non-arp traffic
+    shell: /usr/sbin/ebtables -I FORWARD -p ! ARP -j ACCEPT
+
+  - name: set ebtables FORWARD chain to policy DROP
+    shell: /usr/sbin/ebtables -P FORWARD DROP
+
 - name: Create VMs on hypervisors
   hosts: hv_vm
   gather_facts: false

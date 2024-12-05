@@ -1,0 +1,17 @@
+{
+  "ignition": {
+    "version": "3.1.0"
+  },
+  "storage": {
+    "files": [
+      {
+        "contents": {
+          "source": "data:text/plain;base64,{{ lookup('template', './sysctl.d_arp.conf') | b64encode }}"
+        },
+        "mode": 420,
+        "overwrite": true,
+        "path": "/etc/sysctl.d/arp.conf"
+      }
+    ]
+  }
+}

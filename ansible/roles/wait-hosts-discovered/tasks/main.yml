@@ -35,6 +35,8 @@
     status_code: [200, 201]
     return_content: true
   loop: "{{ cluster.json.hosts | list }}"
+  loop_control:
+    label: "{{ item.id }} - {{ item.requested_hostname }}"
   register: host_data
   until: host_data.json.status != "discovering"
   retries: 30

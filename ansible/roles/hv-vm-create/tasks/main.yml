@@ -20,6 +20,14 @@
   shell: |
     virsh define {{ hv_kvm_def_path }}/{{ inventory_hostname }}.xml
 
+- name: Allow ARP ingress for virtual machines
+  shell: |
+    /usr/sbin/ebtables -A FORWARD -p ARP --arp-ip-dst {{ hostvars[inventory_hostname]['ip'] }} -j ACCEPT
+
+- name: Allow ARP egress for virtual machines
+  shell: |
+    /usr/sbin/ebtables -A FORWARD -p ARP --arp-ip-src {{ hostvars[inventory_hostname]['ip'] }} -j ACCEPT
+
 - name: Set bmc url ipv4
   set_fact:
     bmc_url: "http://{{ hostvars[inventory_hostname]['hv_ip'] }}:{{ hv_bmc_port }}/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}"

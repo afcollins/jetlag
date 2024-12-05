@@ -6,6 +6,17 @@
 # ansible-playbook -i ansible/inventory/cloud42.local ansible/hv-vm-delete.yml
 #
 
+- name: Cleanup hypervisors networking before clearing off VMs
+  hosts: hv
+  strategy: free
+  gather_facts: false
+  tasks:
+  - name: flush ebtables
+    shell: /usr/sbin/ebtables -P FORWARD ACCEPT
+
+  - name: flush ebtables
+    shell: /usr/sbin/ebtables -F
+
 - name: Delete VMs on hypervisors
   hosts: hv_vm
   gather_facts: false
