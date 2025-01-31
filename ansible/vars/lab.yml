@@ -167,9 +167,9 @@ hw_vm_counts:
       default: 2
       sdb: 2
     r640:
-      default: 8
-      sdb: 12
-      nvme0n1: 12
+      default: 20
+      sdb: 0
+      nvme0n1: 0
     r650:
       default: 4
       nvme0n1: 23

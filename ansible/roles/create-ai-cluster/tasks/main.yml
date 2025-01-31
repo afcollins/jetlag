@@ -36,11 +36,8 @@
   include_tasks: static_network_config.yml
   when:
   - cluster_type == "mno"
-  - hybrid_worker_count > 0
-  loop: "{{ groups['hv_vm'][:hybrid_worker_count] }}"
-
-# - debug:
-#     msg: "{{ static_network_config }}"
+  - hybrid_worker_count|int > 0
+  loop: "{{ groups['hv_vm'][:hybrid_worker_count | int] }}"
 
 - name: Create cluster
   uri:

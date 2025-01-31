@@ -13,14 +13,12 @@
 
 - name: Set the hostname and role via mac address
   set_fact:
-    hostname: "{{ item }}"
-    host_role: "{{ hostvars[item]['role'] }}"
+    hostname: "{{ mac_to_hostname[item] }}"
+    host_role: "{{ hostvars[mac_to_hostname[item]]['role'] }}"
+  with_items: "{{ host_macs }}"
   when:
     - lab in rh_labs
-    - hostvars[item]['mac_address'] | lower in host_macs
-  loop: "{{ inventory_nodes }}"
-  loop_control:
-    label: "{{ hostvars[item]['bmc_address'] }}"
+    - item in mac_to_hostname
 
 - name: Set the hostname and role via bmc address
   set_fact:
@@ -30,8 +28,6 @@
     - lab in cloud_labs
     - hostvars[item]['bmc_address'] == host_bmc
   loop: "{{ inventory_nodes }}"
-  loop_control:
-    label: "{{ hostvars[item]['bmc_address'] }}"
 
 - name: Set hostname and role for {{ hostname }}
   uri:
