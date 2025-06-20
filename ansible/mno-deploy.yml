@@ -28,7 +28,10 @@
     vars:
       inventory_group: hv_vm
       index: "{{ hybrid_worker_count | default(0) }}"
-  - wait-hosts-discovered
+  - role: wait-hosts-discovered
+    vars:
+      inventory_nodes: "{{ groups['controlplane'] + groups['worker'] + groups['hv_vm'][:hybrid_worker_count] }}"
+      discover_nodes: "{{ groups['controlplane'] + groups['worker'] + groups['hv_vm'][:hybrid_worker_count] }}"
   - configure-local-storage
   - install-cluster
   - mno-post-cluster-install

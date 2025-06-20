@@ -32,7 +32,7 @@
 
 - name: Libvirt - Check for Virtual Media
   uri:
-    url: "http://{{ hostvars[item]['ansible_host'] }}:9000/redfish/v1/Managers/{{ hostvars[item]['domain_uuid'] }}/VirtualMedia/Cd"
+    url: "http://{{ hostvars[item]['ansible_host'] }}:9000/redfish/v1/Systems/{{ hostvars[item]['domain_uuid'] }}/VirtualMedia/Cd"
     method: Get
     headers:
       content-type: application/json
@@ -46,7 +46,7 @@
 
 - name: Libvirt - Eject any CD Virtual Media
   uri:
-    url: "http://{{ hostvars[item]['ansible_host'] }}:9000/redfish/v1/Managers/{{ hostvars[item]['domain_uuid'] }}/VirtualMedia/Cd/Actions/VirtualMedia.EjectMedia"
+    url: "http://{{ hostvars[item]['ansible_host'] }}:9000/redfish/v1/Systems/{{ hostvars[item]['domain_uuid'] }}/VirtualMedia/Cd/Actions/VirtualMedia.EjectMedia"
     method: POST
     headers:
       content-type: application/json
@@ -60,7 +60,7 @@
 
 - name: Libvirt - Insert virtual media
   uri:
-    url: "http://{{ hostvars[item]['ansible_host'] }}:9000/redfish/v1/Managers/{{ hostvars[item]['domain_uuid'] }}/VirtualMedia/Cd/Actions/VirtualMedia.InsertMedia"
+    url: "http://{{ hostvars[item]['ansible_host'] }}:9000/redfish/v1/Systems/{{ hostvars[item]['domain_uuid'] }}/VirtualMedia/Cd/Actions/VirtualMedia.InsertMedia"
     method: POST
     headers:
       content-type: application/json

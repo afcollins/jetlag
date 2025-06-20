@@ -1,6 +1,10 @@
 ---
 # Set hostname and role
 
+- name: print the discovered host
+  debug:
+    var: discovered_host
+
 - name: Set the host bmc address
   set_fact:
     host_bmc: "{{ (discovered_host.inventory | from_json).bmc_address }}"
@@ -8,19 +12,49 @@
 
 - name: Set the host id and list of mac addresses
   set_fact:
+    host_mac: "{{ (discovered_host.inventory | from_json).interfaces.0.mac_address }}"
+  when: lab in rh_labs
+
+- name: print the discovered host
+  debug:
+    var: host_mac
+
+- name: Lookup the discovered host's ID
+  set_fact:
+    host_interfaces: "{{ (discovered_host.inventory | from_json).interfaces }}"
     host_id: "{{ discovered_host.id }}"
     host_macs: "{{ (discovered_host.inventory | from_json) | json_query('interfaces[].mac_address') | lower }}"
 
-- name: Set the hostname and role via mac address
-  set_fact:
-    hostname: "{{ item }}"
-    host_role: "{{ hostvars[item]['role'] }}"
-  when:
-    - lab in rh_labs
-    - hostvars[item]['mac_address'] | lower in host_macs
-  loop: "{{ inventory_nodes }}"
-  loop_control:
-    label: "{{ hostvars[item]['bmc_address'] }}"
+- name: Lookup the discovered host's hostname and role via mac address
+  block:
+  - name: "Set the hostname"
+    set_fact:
+      hostname: "{{ (hostvars | json_query(jsonqry)).0 }}"
+      theqry: "{{ jsonqry }}"
+    vars:
+      jsonqry: "(*)[?lab_mac=='{{ host_mac }}' || mac_address=='{{ host_mac }}'].inventory_hostname"
+
+  - name: hostname
+    debug:
+      msg: "{{ hostvars | json_query(json_qry) }}"
+
+  - name: query
+    debug:
+      msg: "{{ theqry }}"
+
+  - name: print the discovered host
+    debug:
+      var: hostname
+
+  - name: Set the role
+    set_fact:
+      host_role: "{{ hostvars[hostname]['role'] }}"
+    when:
+      - lab in rh_labs
+      - hostvars[item]['mac_address'] | lower in host_macs
+    loop: "{{ inventory_nodes }}"
+    loop_control:
+      label: "{{ item }}"
 
 - name: Set the hostname and role via bmc address
   set_fact:
@@ -31,7 +65,7 @@
     - hostvars[item]['bmc_address'] == host_bmc
   loop: "{{ inventory_nodes }}"
   loop_control:
-    label: "{{ hostvars[item]['bmc_address'] }}"
+    label: "{{ item }}"
 
 - name: Set hostname and role for {{ hostname }}
   uri:
