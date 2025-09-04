@@ -14,7 +14,7 @@
   tasks:
     - name: devices down
       shell:
-        for i in {5..10} ; do for j in {0..6} ; do nmcli d down enp${i}s0v${j}  ; done ; done
+        for i in {5..9} ; do for j in {0..6} ; do nmcli d down enp${i}s0v${j}  ; done ; done
       become: true
       ignore_errors: true
 
