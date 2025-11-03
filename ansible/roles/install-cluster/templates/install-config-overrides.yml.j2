@@ -20,7 +20,11 @@ capabilities:
 {%     endif %}
 {%   endif %}
 {% else %}
+cpuPartitioningMode: AllNodes
 networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 20
   networkType: OVNKubernetes
 {%   if mno_capabilities_baseline_set is defined or mno_capabilities_additional_enabled | default([], true) | length > 0 %}
 capabilities:

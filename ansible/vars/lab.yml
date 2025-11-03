@@ -48,6 +48,7 @@ hw_vendor:
   r7425: Dell
   r7525: Dell
   r7625: Dell
+  r7725: Dell
   xe8640: Dell
   xe9680: Dell
   1029u: Supermicro
@@ -83,10 +84,11 @@ hw_install_disk:
     y37-h03-r740xd: /dev/disk/by-path/pci-0000:18:00.0-scsi-0:2:0:0
     y37-h05-r740xd: /dev/disk/by-path/pci-0000:18:00.0-scsi-0:2:0:0
     y37-h07-r740xd: /dev/disk/by-path/pci-0000:18:00.0-scsi-0:2:0:0
-    r750: /dev/disk/by-path/pci-0000:05:00.0-ata-1
+    r750: /dev/disk/by-path/pci-0000:05:00.0-ata-1.0
     r7425: /dev/disk/by-path/pci-0000:e2:00.0-scsi-0:2:0:0
     r7525: /dev/disk/by-path/pci-0000:01:00.0-scsi-0:2:0:0
     r760: /dev/disk/by-path/pci-0000:3f:00.0-scsi-0:0:1:0
+    r7725: /dev/disk/by-path/pci-0000:81:00.0-nvme-1
     6029p: /dev/disk/by-path/pci-0000:00:11.5-ata-5
     xe8640: /dev/disk/by-path/pci-0000:01:00.0-nvme-1
     xe9680: /dev/disk/by-path/pci-0000:01:00.0-nvme-1
@@ -225,6 +227,12 @@ hw_nic_name:
     - ens3f1
     - ens6f0
     - ens6f1
+    r7725:
+    - eno17395np0
+    - eno16595np0
+    - eno16605np1
+    - eno16695np0
+    - eno16705np1
 
 # Based on VM Size (8vCPU, 18GiB Memory, 120G Disk)
 hw_vm_counts:
