@@ -20,7 +20,11 @@ capabilities:
 {% endif %}
 {% endif %}
 {% else %}
+cpuPartitioningMode: AllNodes
 networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 20
   networkType: OVNKubernetes
 {% endif %}
 {% if enable_fips | default(false) %}
