@@ -12,7 +12,6 @@
     - dnsmasq
     - frr
     - git
-    - golang-bin
     - httpd
     - httpd-tools
     - ipmitool
