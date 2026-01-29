@@ -21,3 +21,5 @@ gen
 scripts/self-sched-deploy/vars/config.env
 scripts/self-sched-deploy/vars/state.env
 scripts/self-sched-deploy/repos/
+*.log
+*.orig

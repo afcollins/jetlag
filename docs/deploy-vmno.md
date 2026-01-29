@@ -505,6 +505,11 @@ This may be achieved by setting the variable `vm_igb_nics: true` in your variabl
 
 **Please note:** When VMs are created with SR-IOV devices using the IGB driver, the devices and connections may never fully initialize. NetworkManager repeatedly attempts to start them, which results in a large amount of churn on the VMs. A workaround to this churn is to force the devices down and connections' autoconnect off for those created for the interfaces.
 
+See the following playbook:
+```
+ansible/vm-sriov-disable.yml
+```
+
 ## Additional helper playbooks for VM management
 
 If VMs become unresponsive, sometimes destroying and restarting them is the only remedy. Since the garbage cleanup of pods of all VMs on a single hypervisor at a time can cause stalling, it also may be beneficial to start one VM per HV at a time. Playbooks have been added for all of these tasks.
