@@ -152,13 +152,9 @@ _make_oc_helpers bmh   bmh               3
 _make_oc_helpers ci    clusterinstance   3
 _make_oc_helpers aci   aci               4
 
-# bmh-get override: BMH names are vmXXXXX not standard-XXXXX, needs namespace lookup
-bmh-get() {
-    local vm="$1" output="${2:-wide}"
-    if [[ -z "$vm" ]]; then
-        echo "Usage: bmh-get <vm_name> [format]  (e.g. bmh-get vm00001 yaml)" >&2
-        return 1
-    fi
+# BMH overrides: name is vmXXXXX, namespace must be discovered
+_bmh_lookup() {
+    local vm="$1"
     local vmname="vm$(_pad5 "$vm")"
     local ns
     ns=$(oc get bmh -A --no-headers 2>/dev/null | awk -v name="$vmname" '$2 == name { print $1; exit }')
@@ -166,8 +162,33 @@ bmh-get() {
         echo "Error: BMH '$vmname' not found on cluster" >&2
         return 1
     fi
+    echo "$ns $vmname"
+}
+
+bmhg() {
+    local vm="$1" output="${2:-wide}"
+    if [[ -z "$vm" ]]; then
+        echo "Usage: bmhg <vm> [format]  (e.g. bmhg 1 yaml)" >&2
+        return 1
+    fi
+    local result ns vmname
+    result=$(_bmh_lookup "$vm") || return 1
+    ns="${result% *}" vmname="${result#* }"
     echo "# oc get bmh -o $output -n $ns $vmname"
     oc get bmh -o "$output" -n "$ns" "$vmname"
+}
+
+bmhd() {
+    local vm="$1"
+    if [[ -z "$vm" ]]; then
+        echo "Usage: bmhd <vm>  (e.g. bmhd 1)" >&2
+        return 1
+    fi
+    local result ns vmname
+    result=$(_bmh_lookup "$vm") || return 1
+    ns="${result% *}" vmname="${result#* }"
+    echo "# oc describe bmh -n $ns $vmname"
+    oc describe bmh -n "$ns" "$vmname"
 }
 
 # --- cross-reference helpers ---
@@ -214,7 +235,7 @@ ci-info() {
     fi
 
     printf "%-12s %-16s %-14s %-50s %s\n" "VM" "IP" "STATE" "HYPERVISOR" "HV_IP"
-    echo "$bmh_lines" | while read -r _ vmname state _rest; do
+    echo "$bmh_lines" | while read -r vmname state _rest; do
         local inv
         inv=$(_ansible_lookup "$vmname")
         local vm_ip hv hv_ip
