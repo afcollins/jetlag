@@ -25,13 +25,21 @@ _ansible_lookup() {
     ' "$ANSIBLE_INVENTORY"
 }
 
+# Normalize input: accept "vm00123", "00123", "123", or just "123"
+_pad5() {
+    local input="${1#vm}"
+    input="${input#standard-}"
+    printf "%05d" "$((10#$input))"
+}
+
 # 1) ssh-vm <vmname> — SSH to a VM by its IP
 ssh-vm() {
     local vm="$1"
     if [[ -z "$vm" ]]; then
-        echo "Usage: ssh-vm <vm_name>  (e.g. ssh-vm vm00001)" >&2
+        echo "Usage: ssh-vm <vm>  (e.g. ssh-vm 1 or ssh-vm vm00001)" >&2
         return 1
     fi
+    vm="vm$(_pad5 "$vm")"
     local result
     result=$(_ansible_lookup "$vm")
     if [[ -z "$result" ]]; then
@@ -48,9 +56,10 @@ ssh-vm() {
 vm-info() {
     local vm="$1"
     if [[ -z "$vm" ]]; then
-        echo "Usage: vm-info <vm_name>  (e.g. vm-info vm00001)" >&2
+        echo "Usage: vm-info <vm>  (e.g. vm-info 1 or vm-info vm00001)" >&2
         return 1
     fi
+    vm="vm$(_pad5 "$vm")"
     local result
     result=$(_ansible_lookup "$vm")
     if [[ -z "$result" ]]; then
@@ -69,9 +78,10 @@ vm-info() {
 ssh-hv() {
     local vm="$1"
     if [[ -z "$vm" ]]; then
-        echo "Usage: ssh-hv <vm_name>  (e.g. ssh-hv vm00001)" >&2
+        echo "Usage: ssh-hv <vm>  (e.g. ssh-hv 1 or ssh-hv vm00001)" >&2
         return 1
     fi
+    vm="vm$(_pad5 "$vm")"
     local result
     result=$(_ansible_lookup "$vm")
     if [[ -z "$result" ]]; then
@@ -86,13 +96,6 @@ ssh-hv() {
 }
 
 # --- oc helpers (dynamic, queries the cluster) ---
-
-# Normalize input: accept "vm00123", "00123", "123", or just "123"
-_pad5() {
-    local input="${1#vm}"
-    input="${input#standard-}"
-    printf "%05d" "$((10#$input))"
-}
 
 # _make_oc_helpers generates a family of functions for an oc resource type.
 #
