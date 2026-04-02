@@ -87,30 +87,79 @@ ssh-hv() {
 
 # --- oc helpers (dynamic, queries the cluster) ---
 
-
 # Normalize input: accept "vm00123", "00123", "123", or just "123"
-# Returns the 5-digit zero-padded number
 _pad5() {
-    local input="${1#vm}"           # strip leading "vm" if present
-    input="${input#standard-}"     # strip leading "standard-" if present
+    local input="${1#vm}"
+    input="${input#standard-}"
     printf "%05d" "$((10#$input))"
 }
 
-# bmh-get <vm> — oc get bmh -o yaml for a VM (looks up namespace dynamically)
+# _make_oc_helpers generates a family of functions for an oc resource type.
+#
+# Usage: _make_oc_helpers <alias> <oc_resource> <filter_col>
+#
+# Given alias "ci", resource "clusterinstance", filter column 4, creates:
+#   ci                  → oc get clusterinstance -A
+#   cis [filter]        → no arg: unique state counts; "val": include; "-val": exclude
+#   ci-get <N> [fmt]    → oc get -o <fmt> -n standard-N standard-N  (fmt defaults to wide)
+#   ci-describe <N>     → oc describe -n standard-N standard-N
+_make_oc_helpers() {
+    local alias="$1" resource="$2" col="$3"
+
+    # <alias> — raw list
+    eval "${alias}() { oc get ${resource} -A \"\$@\"; }"
+
+    # <alias>s [filter] — count / filter / exclude
+    eval "${alias}s() {
+        local filter=\"\$1\"
+        if [[ -z \"\$filter\" ]]; then
+            ${alias} | awk '{ print \$${col} }' | sort | uniq -c
+        elif [[ \"\$filter\" == -* ]]; then
+            local exclude=\"\${filter#-}\"
+            ${alias} --no-headers | awk -v ex=\"\$exclude\" '\$${col} != ex' | column -t
+        else
+            ${alias} --no-headers | awk -v st=\"\$filter\" '\$${col} == st' | column -t
+        fi
+    }"
+
+    # <alias>-get <N> [output_format] — get by cluster number
+    eval "${alias}g() {
+        local num=\"\$1\" output=\"\${2:-wide}\"
+        if [[ -z \"\$num\" ]]; then
+            echo \"Usage: ${alias}-get <number> [format]  (e.g. ${alias}-get 1 yaml)\" >&2
+            return 1
+        fi
+        local name=\"standard-\$(_pad5 \"\$num\")\"
+        echo \"# oc get ${resource} -o \$output -n \$name \$name\"
+        oc get ${resource} -o \"\$output\" -n \"\$name\" \"\$name\"
+    }"
+
+    # <alias>-describe <N> — describe by cluster number
+    eval "${alias}d() {
+        local num=\"\$1\"
+        if [[ -z \"\$num\" ]]; then
+            echo \"Usage: ${alias}-describe <number>  (e.g. ${alias}-describe 1)\" >&2
+            return 1
+        fi
+        local name=\"standard-\$(_pad5 \"\$num\")\"
+        echo \"# oc describe ${resource} -n \$name \$name\"
+        oc describe ${resource} -n \"\$name\" \"\$name\"
+    }"
+}
+
+#              alias   oc resource       filter column
+_make_oc_helpers bmh   bmh               3
+_make_oc_helpers ci    clusterinstance   3
+_make_oc_helpers aci   aci               4
+
+# bmh-get override: BMH names are vmXXXXX not standard-XXXXX, needs namespace lookup
 bmh-get() {
-    local vm="$1"
+    local vm="$1" output="${2:-wide}"
     if [[ -z "$vm" ]]; then
-        echo "Usage: bmh-get <vm_name>           (e.g. bmh-get vm00001)" >&2
-        echo "Usage: bmh-get <vm_name> <-o type> (e.g. bmh-get vm00001 yaml)" >&2
+        echo "Usage: bmh-get <vm_name> [format]  (e.g. bmh-get vm00001 yaml)" >&2
         return 1
     fi
-    local output="$2"
-    if [[ -z "$output" ]]; then
-        output="wide"
-    fi
-    local num
-    num=$(_pad5 "$vm")
-    local vmname="vm${num}"
+    local vmname="vm$(_pad5 "$vm")"
     local ns
     ns=$(oc get bmh -A --no-headers 2>/dev/null | awk -v name="$vmname" '$2 == name { print $1; exit }')
     if [[ -z "$ns" ]]; then
@@ -118,123 +167,107 @@ bmh-get() {
         return 1
     fi
     echo "# oc get bmh -o $output -n $ns $vmname"
-    oc get bmh -o $output -n "$ns" "$vmname"
+    oc get bmh -o "$output" -n "$ns" "$vmname"
 }
 
-bmh() {
-    oc get bmh -A
-}
+# --- cross-reference helpers ---
 
-# bmhs [state] — list clusterinstances, optionally filtered by ProvisionStatus
-#   bmhs              → show all
-#   bmhs provisioned  → show only provisioned
-#   bmhs !provisioned → show everything except provisioned
-bmhs() {
-    local filter="$1"
-    if [[ -z "$filter" ]]; then
-        bmh | awk '{ print $3 }' | sort | uniq -c
-    elif [[ "$filter" == !* ]]; then
-        local exclude="${filter#!}"
-        bmh --no-headers | awk -v ex="$exclude" '$3 != ex' | (echo "NAMESPACE NAME STATE CONSUMER ONLINE ERROR AGE" && cat) | column -t
-    else
-        bmh --no-headers | awk -v st="$filter" '$3 == st' | (echo "NAMESPACE NAME STATE CONSUMER ONLINE ERROR AGE" && cat) | column -t
-    fi
-}
-
-ci() {
-        oc get clusterinstance -A
-}
-
-# cis [state] — list clusterinstances, optionally filtered by ProvisionStatus
-#   cis              → show all
-#   cis Completed    → show only Completed
-#   cis !Completed   → show everything except Completed
-cis() {
-    local filter="$1"
-    if [[ -z "$filter" ]]; then
-        ci | awk '{ print $4 }' | sort | uniq -c
-    elif [[ "$filter" == !* ]]; then
-        local exclude="${filter#!}"
-	ci --no-headers | awk -v ex="$exclude" '$4 != ex' | (echo "NAMESPACE NAME PAUSED PROVISIONSTATUS PROVISIONDETAILS AGE" && cat) | column -t
-    else
-	ci --no-headers | awk -v st="$filter" '$4 == st' | (echo "NAMESPACE NAME PAUSED PROVISIONSTATUS PROVISIONDETAILS AGE" && cat) | column -t
-    fi
-}
-
-aci() {
-    oc get aci -A
-}
-
-# aci-state [state] — list ACIs, optionally filtered by state
-#   aci-state               → show all
-#   aci-state adding-hosts  → show only adding-hosts
-#   aci-state !adding-hosts → show everything except adding-hosts
-aci-state() {
-    local filter="$1"
-    if [[ -z "$filter" ]]; then
-        aci | awk '{ print $4 }' | sort | uniq -c
-    elif [[ "$filter" == !* ]]; then
-        local exclude="${filter#!}"
-        aci --no-headers | awk -v ex="$exclude" '$4 != ex' | (echo "NAMESPACE NAME CLUSTER STATE" && cat) | column -t
-    else
-        aci  --no-headers | awk -v st="$filter" '$4 == st' | (echo "NAMESPACE NAME CLUSTER STATE" && cat) | column -t
-    fi
-}
-
-# aci-get <number> — oc get aci by 3-digit (or any) cluster number
-#   aci-get 1   → oc get aci standard-00001 -n standard-00001 -o yaml
-aci-get() {
+# ci-info <N> — show cluster → VMs → hypervisors mapping
+#   Chains: clusterinstance → bmh (namespace) → inventory (HV)
+ci-info() {
     local num="$1"
     if [[ -z "$num" ]]; then
-        echo "Usage: aci-get <number>  (e.g. aci-get 1, aci-get 042)" >&2
+        echo "Usage: ci-info <number>  (e.g. ci-info 1)" >&2
         return 1
     fi
-    local padded
+    local padded ns
     padded=$(_pad5 "$num")
-    local name="standard-${padded}"
-    echo "# oc get aci -o yaml -n $name $name"
-    oc get aci -o yaml -n "$name" "$name"
+    ns="standard-${padded}"
+
+    echo "Cluster: $ns"
+    echo "---"
+
+    # Get clusterinstance status
+    local ci_line
+    ci_line=$(oc get clusterinstance -n "$ns" "$ns" --no-headers 2>/dev/null)
+    if [[ -n "$ci_line" ]]; then
+        echo "Status:  $(echo "$ci_line" | awk '{ print $3, $4 }')"
+    else
+        echo "Status:  (clusterinstance not found)"
+    fi
+
+    # Get ACI state
+    local aci_line
+    aci_line=$(oc get aci -n "$ns" "$ns" --no-headers 2>/dev/null)
+    if [[ -n "$aci_line" ]]; then
+        echo "ACI:     $(echo "$aci_line" | awk '{ print $4 }')"
+    fi
+
+    echo "---"
+
+    # Get BMHs in this namespace → VM names → inventory HV lookup
+    local bmh_lines
+    bmh_lines=$(oc get bmh -n "$ns" --no-headers 2>/dev/null)
+    if [[ -z "$bmh_lines" ]]; then
+        echo "No BMHs found in namespace $ns"
+        return
+    fi
+
+    printf "%-12s %-16s %-14s %-50s %s\n" "VM" "IP" "STATE" "HYPERVISOR" "HV_IP"
+    echo "$bmh_lines" | while read -r _ vmname state _rest; do
+        local inv
+        inv=$(_ansible_lookup "$vmname")
+        local vm_ip hv hv_ip
+        if [[ -n "$inv" ]]; then
+            vm_ip=$(echo "$inv" | cut -f1)
+            hv=$(echo "$inv" | cut -f2)
+            hv_ip=$(echo "$inv" | cut -f3)
+        else
+            vm_ip="?" hv="(not in inventory)" hv_ip="?"
+        fi
+        printf "%-12s %-16s %-14s %-50s %s\n" "$vmname" "$vm_ip" "$state" "$hv" "$hv_ip"
+    done
 }
 
-# aci-describe <number> — oc describe aci by cluster number
-aci-describe() {
-    local num="$1"
-    if [[ -z "$num" ]]; then
-        echo "Usage: aci-describe <number>  (e.g. aci-describe 1)" >&2
+# hv-info <hv_name_or_ip> — show all VMs and clusters on a given hypervisor
+hv-info() {
+    local query="$1"
+    if [[ -z "$query" ]]; then
+        echo "Usage: hv-info <hostname_or_ip>  (e.g. hv-info e34-h01 or hv-info 198.18.0.8)" >&2
         return 1
     fi
-    local padded
-    padded=$(_pad5 "$num")
-    local name="standard-${padded}"
-    echo "# oc describe aci -n $name $name"
-    oc describe aci -n "$name" "$name"
-}
-
-# ci-get <number> — oc get clusterinstance by cluster number
-ci-get() {
-    local num="$1"
-    if [[ -z "$num" ]]; then
-        echo "Usage: ci-get <number>  (e.g. ci-get 1)" >&2
-        return 1
-    fi
-    local padded
-    padded=$(_pad5 "$num")
-    local name="standard-${padded}"
-    echo "# oc get clusterinstance -o yaml -n $name $name"
-    oc get clusterinstance -o yaml -n "$name" "$name"
+    # Search inventory for all VMs matching this HV (partial match supported)
+    printf "%-12s %-16s %-50s %-16s %s\n" "VM" "VM_IP" "HYPERVISOR" "HV_IP" "CLUSTER_NS"
+    awk -v q="$query" '
+        /^\[/ { next }
+        /^$/ { next }
+        {
+            for (i = 2; i <= NF; i++) {
+                split($i, kv, "=")
+                vals[kv[1]] = kv[2]
+            }
+            if (vals["ansible_host"] ~ q || vals["hv_ip"] == q) {
+                printf "%-12s %-16s %-50s %s\n", $1, vals["ip"], vals["ansible_host"], vals["hv_ip"]
+            }
+            delete vals
+        }
+    ' "$ANSIBLE_INVENTORY"
 }
 
 echo "Loaded ansible-helpers from $ANSIBLE_INVENTORY"
-echo "  ssh-vm <name>      — SSH to VM by name"
-echo "  vm-info <name>     — Show hypervisor info for a VM"
-echo "  ssh-hv <name>      — SSH to the VM's hypervisor"
-echo "  bmh-get <vm>       — oc get bmh -o yaml (auto-discovers namespace)"
-echo "  bmh-state [state]  — List bmh (filter by status, !status to exclude)"
-echo "  bmhs               — List unique bmh states"
-echo "  cis [state]        — List clusterinstances (filter by status, !status to exclude)"
-echo "  ci-get <N>         — oc get clusterinstance -o yaml by number"
-echo "  aci-state [state]  — List ACIs (filter by state, !state to exclude)"
-echo "  acis               — List ACI unique states"
-echo "  aci-get <N>        — oc get aci -o yaml by number"
-echo "  aci-describe <N>   — oc describe aci by number"
+echo "  ssh-vm <name>        — SSH to VM by name"
+echo "  vm-info <name>       — Show hypervisor info for a VM"
+echo "  ssh-hv <name>        — SSH to the VM's hypervisor"
+echo "  ---"
+echo "  For each resource (bmh, ci, aci):"
+echo "    <r>                — oc get <resource> -A"
+echo "    <r>s               — count unique states"
+echo "    <r>s <state>       — filter to state"
+echo "    <r>s -<state>      — exclude state"
+echo "    <r>g <N> [fmt]     — oc get by cluster/vm number (fmt: wide, yaml, json)"
+echo "    <r>d <N>           — oc describe by number"
+echo "  bmh-get uses vm name and auto-discovers namespace"
+echo "  ---"
+echo "  ci-info <N>          — full cluster map: status, VMs, hypervisors"
+echo "  hv-info <host|ip>    — all VMs on a hypervisor (partial match ok)"
 
