@@ -119,9 +119,9 @@ _make_oc_helpers() {
             ${alias} | awk '{ print \$${col} }' | sort | uniq -c
         elif [[ \"\$filter\" == -* ]]; then
             local exclude=\"\${filter#-}\"
-            ${alias} --no-headers | awk -v ex=\"\$exclude\" '\$${col} != ex' | column -t
+            ${alias} --no-headers | awk '\$${col} !~ ex' ex=\"\$exclude\" | column -t
         else
-            ${alias} --no-headers | awk -v st=\"\$filter\" '\$${col} == st' | column -t
+            ${alias} --no-headers | awk '\$${col} ~ st' st=\"\$filter\" | column -t
         fi
     }"
 
