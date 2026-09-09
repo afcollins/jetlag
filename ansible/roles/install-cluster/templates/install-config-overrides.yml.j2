@@ -20,6 +20,7 @@ capabilities:
 {%     endif %}
 {%   endif %}
 {% else %}
+cpuPartitioningMode: AllNodes
 networking:
   networkType: OVNKubernetes
 {%   if mno_capabilities_baseline_set is defined or mno_capabilities_additional_enabled | default([], true) | length > 0 %}
