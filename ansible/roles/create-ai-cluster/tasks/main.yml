@@ -285,6 +285,14 @@
   - setup_bastion_proxy | default(false)
   - not use_bastion_registry | default(false)
 
+- name: ANDREW configure cgroup-v1 for customer case
+  include_role:
+    name: create-ai-cluster
+    tasks_from: 01_manifest_update.yml
+  with_items:
+  - file_name: enable-cgroups-v1.yaml
+    template_name: enable-cgroups-v1.yaml
+
 # Disable lab interface manifests, skip if SNO has sno_use_lab_dhcp=true
 - name: Include custom manifests to disable the lab interface (RH Labs & BYOL)
   include_tasks: 01_manifest_update.yml
