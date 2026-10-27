@@ -150,6 +150,7 @@
     ansible.builtin.uri:
       url: "{{ prega_idms_link }}"
       dest: "{{ idms_prega_configuration }}"
+      validate_certs: false
       mode: '0644'
     register: idms_download_result
     until: idms_download_result is not failed
